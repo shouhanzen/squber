@@ -1,0 +1,22 @@
+[project]
+name = "squber"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastmcp",
+    "fastapi",
+    "uvicorn[standard]",
+    "sqlalchemy",
+    "aiosqlite",
+    "pandas",
+]
+
+[project.scripts]
+squber = "squber:main"
+squber-http = "squber.sse_server:run_http_server"
+
+[build-system]
+requires = ["uv_build>=0.8.15,<0.9.0"]
+build-backend = "uv_build"
