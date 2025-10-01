@@ -11,7 +11,6 @@ import uvicorn
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-from .auth import require_auth, get_auth_info
 
 
 class SquberHTTPServer:
@@ -45,9 +44,7 @@ class SquberHTTPServer:
                 "name": "Squber - Squid Fishing AI Assistant API",
                 "version": "0.1.0",
                 "description": "HTTP API for MCP server providing squid fishing market intelligence",
-                "authentication": get_auth_info(),
                 "endpoints": {
-                    "/auth/status": "Authentication status and configuration",
                     "/tools/list": "List available MCP tools",
                     "/tools/{tool_name}": "Execute MCP tool",
                     "/health": "Server health check"
@@ -59,27 +56,13 @@ class SquberHTTPServer:
             """Health check endpoint."""
             return {"status": "healthy", "service": "squber-mcp-api"}
 
-        @self.app.get("/auth/status")
-        async def auth_status_endpoint():
-            """Get authentication status."""
-            return get_auth_info()
 
         @self.app.post("/tools/{tool_name}")
         async def execute_tool(
             tool_name: str,
-            request: Request,
-            x_api_key: str = Header(None, alias="X-API-Key")
+            request: Request
         ):
-            """Execute an MCP tool with authentication."""
-
-            # Check authentication for production
-            if os.getenv("SQUBER_ENV") != "development" or os.getenv("SQUBER_REQUIRE_AUTH"):
-                if not require_auth(x_api_key):
-                    raise HTTPException(
-                        status_code=401,
-                        detail="Invalid or missing API key. Please provide X-API-Key header."
-                    )
-
+            """Execute an MCP tool."""
             try:
                 # Parse request body for tool parameters
                 body = await request.json() if request.headers.get("content-type") == "application/json" else {}
@@ -92,22 +75,41 @@ class SquberHTTPServer:
                 raise HTTPException(status_code=500, detail=str(e))
 
         @self.app.get("/tools/list")
-        async def list_tools(x_api_key: str = Header(None, alias="X-API-Key")):
+        async def list_tools():
             """List available MCP tools."""
-
-            # Check authentication for production
-            if os.getenv("SQUBER_ENV") != "development" or os.getenv("SQUBER_REQUIRE_AUTH"):
-                if not require_auth(x_api_key):
-                    raise HTTPException(
-                        status_code=401,
-                        detail="Invalid or missing API key. Please provide X-API-Key header."
-                    )
-
             try:
                 tools = await self.list_mcp_tools()
                 return JSONResponse(content={"tools": tools})
             except Exception as e:
                 raise HTTPException(status_code=500, detail=str(e))
+
+        # Non-MCP routes for serving frontend
+        @self.app.get("/frontend")
+        async def frontend_redirect():
+            """Redirect to frontend app."""
+            return JSONResponse(content={
+                "message": "Frontend available at /app",
+                "frontend_url": "/app",
+                "api_docs": "/docs"
+            })
+
+        from fastapi.staticfiles import StaticFiles
+        from fastapi.responses import FileResponse
+        import os
+
+        # Serve static frontend files (if built)
+        frontend_dist = os.path.join(os.path.dirname(__file__), "../../frontend/dist")
+        if os.path.exists(frontend_dist):
+            self.app.mount("/app", StaticFiles(directory=frontend_dist, html=True), name="frontend")
+
+            @self.app.get("/app/{full_path:path}")
+            async def serve_frontend(full_path: str):
+                """Serve React frontend with fallback to index.html for SPA routing."""
+                file_path = os.path.join(frontend_dist, full_path)
+                if os.path.exists(file_path) and os.path.isfile(file_path):
+                    return FileResponse(file_path)
+                # Fallback to index.html for SPA routing
+                return FileResponse(os.path.join(frontend_dist, "index.html"))
 
     async def execute_mcp_tool(self, tool_name: str, parameters: Dict[str, Any]) -> Dict[str, Any]:
         """Execute MCP tool via STDIO client."""
@@ -165,7 +167,6 @@ class SquberHTTPServer:
     def run(self, host: str = "0.0.0.0", port: int = 8000):
         """Run the HTTP server."""
         print(f"🦑 Starting Squber HTTP API server on {host}:{port}")
-        print(f"🔐 Authentication: {get_auth_info()['auth_method']}")
         print(f"🌍 Environment: {os.getenv('SQUBER_ENV', 'development')}")
 
         uvicorn.run(

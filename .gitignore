@@ -10,7 +10,9 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+# Python lib folders (but not frontend/src/lib)
+/lib/
+build/lib/
 lib64/
 parts/
 sdist/
@@ -89,3 +91,19 @@ docs/_build/
 # Backup files
 *.bak
 *.backup
+
+# Node.js (for backend)
+backend/node_modules/
+backend/.env
+backend/logs/
+
+# Frontend build artifacts
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+
+# Nginx logs and temp files
+nginx.log
+error.log
+access.log
+nginx.pid

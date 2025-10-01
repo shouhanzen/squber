@@ -33,8 +33,8 @@ class DatabaseManager:
             expire_on_commit=False
         )
 
-    async def execute_query(self, query: str, limit: int = 1000) -> Dict[str, Any]:
-        """Execute a readonly SQL query."""
+    async def execute_query(self, query: str, limit: int = 1000, params: Dict[str, Any] = None) -> Dict[str, Any]:
+        """Execute a readonly SQL query with optional parameters."""
         # Basic safety check - only allow SELECT statements
         query_stripped = query.strip().upper()
         if not query_stripped.startswith("SELECT"):
@@ -45,7 +45,10 @@ class DatabaseManager:
             query += f" LIMIT {limit}"
 
         async with self.async_session() as session:
-            result = await session.execute(text(query))
+            if params:
+                result = await session.execute(text(query), params)
+            else:
+                result = await session.execute(text(query))
             rows = result.fetchall()
             columns = list(result.keys()) if rows else []
 
