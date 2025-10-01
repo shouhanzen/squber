@@ -12,6 +12,7 @@ dependencies = [
     "aiosqlite",
     "pandas",
     "aiohttp",
+    "rich",
 ]
 
 [project.scripts]

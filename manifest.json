@@ -1,0 +1,11 @@
+{
+    "team_name": "Team Squid Catchers",
+    "freeze_timestamp": "2025-10-01T17:24:50Z",
+    "licenses": [
+        {
+            "component": "FastMCP",
+            "license": "Apache 2.0",
+            "link": "https://www.apache.org/licenses/LICENSE-2.0"
+        }
+    ]
+}
